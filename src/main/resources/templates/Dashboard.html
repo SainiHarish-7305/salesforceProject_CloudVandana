@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Dashboard</title>
+
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: linear-gradient(135deg, #e6ecf5, #f9fbff);
+        font-family: "Segoe UI", Arial, sans-serif;
+      }
+
+      .container {
+        position: relative;
+        width: 90%;
+        max-width: 1000px;
+        background: #ffffff;
+        border-radius: 10px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        padding: 24px 30px 30px;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+
+      .header h2 {
+        margin: 0;
+        font-size: 22px;
+        color: #1f2d3d;
+      }
+
+      .actions button {
+        padding: 8px 14px;
+        margin-left: 8px;
+        border: none;
+        background: #0176d3;
+        color: white;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .actions button.logout {
+        background: #e74c3c;
+      }
+
+      .actions button:hover {
+        opacity: 0.9;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: #ffffff;
+      }
+
+      th,
+      td {
+        padding: 14px;
+        border-bottom: 1px solid #e6e6e6;
+        font-size: 14px;
+      }
+
+      th {
+        background: #f4f6f9;
+        text-align: left;
+        color: #4a4a4a;
+      }
+
+      tr:hover {
+        background: #f9fbfd;
+      }
+
+      /* Status badge */
+      .status {
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        display: inline-block;
+      }
+
+      .status-active {
+        background: #e6f7ee;
+        color: #1e7e34;
+      }
+
+      .status-inactive {
+        background: #fdecea;
+        color: #a71d2a;
+      }
+
+      /* Toggle switch */
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 46px;
+        height: 24px;
+      }
+
+      .switch input {
+        display: none;
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        background-color: #cfd6dd;
+        border-radius: 24px;
+        width: 100%;
+        height: 100%;
+        transition: 0.3s;
+      }
+
+      .slider:before {
+        content: "";
+        position: absolute;
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        border-radius: 50%;
+        transition: 0.3s;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+
+      input:checked + .slider {
+        background-color: #2ecc71;
+      }
+
+      input:checked + .slider:before {
+        transform: translateX(22px);
+      }
+
+      .empty {
+        text-align: center;
+        padding: 40px;
+        color: #777;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="header">
+        <div>
+          <h2>Salesforce Validation Rules</h2>
+          <div style="font-size: 13px; color: #666; margin-top: 4px">
+            Logged in as <b th:text="${username}">User</b>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button onclick="goBack()">Back</button>
+          <button onclick="getMetadata()">Get Metadata</button>
+          <button class="logout" onclick="logout()">Logout</button>
+        </div>
+      </div>
+
+      <div id="data" class="empty">
+        Click <b>Get Metadata</b> to load validation rules
+      </div>
+    </div>
+
+    <script>
+      function getMetadata() {
+        fetch("/api/metadata")
+          .then((r) => {
+            if (!r.ok) throw new Error("Unauthorized");
+            return r.json();
+          })
+          .then((d) => renderTable(d.records))
+          .catch(() => (location.href = "/login"));
+      }
+
+      function renderTable(records) {
+        if (!records || records.length === 0) {
+          document.getElementById("data").innerHTML =
+            "<div class='empty'>No validation rules found</div>";
+          return;
+        }
+
+        let html = `
+          <table>
+            <tr>
+              <th>Validation Name</th>
+              <th>Object</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+        `;
+
+        records.forEach((r) => {
+          const statusText = r.Active ? "Active" : "Inactive";
+          const statusClass = r.Active ? "status-active" : "status-inactive";
+
+          html += `
+            <tr>
+              <td>${r.ValidationName}</td>
+              <td>${r.EntityDefinition?.QualifiedApiName || "-"}</td>
+              <td>
+                <span
+                  id="status-${r.Id}"
+                  class="status ${statusClass}"
+                >
+                  ${statusText}
+                </span>
+              </td>
+              <td>
+                <label class="switch">
+                  <input
+                    type="checkbox"
+                    ${r.Active ? "checked" : ""}
+                    onchange="toggleUIStatus('${r.Id}', this.checked)"
+                  >
+                  <span class="slider"></span>
+                </label>
+              </td>
+            </tr>
+          `;
+        });
+
+        html += "</table>";
+        document.getElementById("data").innerHTML = html;
+      }
+
+      function toggleUIStatus(ruleId, isActive) {
+        const statusEl = document.getElementById("status-" + ruleId);
+
+        if (isActive) {
+          statusEl.innerText = "Active";
+          statusEl.className = "status status-active";
+        } else {
+          statusEl.innerText = "Inactive";
+          statusEl.className = "status status-inactive";
+        }
+      }
+
+      function logout() {
+        location.href = "/logout";
+      }
+      function goBack() {
+        window.history.back();
+      }
+    </script>
+  </body>
+</html>
