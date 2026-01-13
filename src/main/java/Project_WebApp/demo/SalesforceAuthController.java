@@ -16,10 +16,13 @@ public class SalesforceAuthController {
 
   private final SalesforceTokenService tokenService;
 
-  @Value("${salesforce.client.id}")
+  @Value("${SALESFORCE_CLIENT_ID}")
   private String clientId;
 
-  @Value("${salesforce.redirect.uri}")
+  @Value("${SALESFORCE_CLIENT_SECRET}")
+  private String clientSecret;
+
+  @Value("${SALESFORCE_REDIRECT_URI}")
   private String redirectUri;
 
   public SalesforceAuthController(SalesforceTokenService tokenService) {
