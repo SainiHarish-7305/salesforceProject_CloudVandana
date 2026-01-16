@@ -5,11 +5,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import java.util.Map;
 
 @Service
 public class SalesforceTokenService {
+
   @Value("${salesforce.client.id}")
   private String clientId;
 
@@ -19,32 +22,38 @@ public class SalesforceTokenService {
   @Value("${salesforce.redirect.uri}")
   private String redirectUri;
 
+  private final RestTemplate restTemplate = new RestTemplate();
+
   public TokenResponse exchangeCodeForToken(String code) {
 
     String tokenUrl = "https://login.salesforce.com/services/oauth2/token";
-
-    RestTemplate restTemplate = new RestTemplate();
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
     String body = "grant_type=authorization_code"
-        + "&code=" + code
-        + "&client_id=" + clientId
-        + "&client_secret=" + clientSecret
-        + "&redirect_uri=" + redirectUri;
+        + "&code=" + URLEncoder.encode(code, StandardCharsets.UTF_8)
+        + "&client_id=" + URLEncoder.encode(clientId, StandardCharsets.UTF_8)
+        + "&client_secret=" + URLEncoder.encode(clientSecret, StandardCharsets.UTF_8)
+        + "&redirect_uri=" + URLEncoder.encode(redirectUri, StandardCharsets.UTF_8);
 
     HttpEntity<String> request = new HttpEntity<>(body, headers);
 
-    ResponseEntity<Map> response = restTemplate.postForEntity(tokenUrl, request, Map.class);
+    ResponseEntity<Map> response;
+    try {
+      response = restTemplate.postForEntity(tokenUrl, request, Map.class);
+    } catch (Exception e) {
+      throw new RuntimeException("Salesforce token call failed", e);
+    }
+
+    if (response == null || response.getBody() == null) {
+      throw new RuntimeException("Empty response from Salesforce token API");
+    }
 
     Map<String, Object> responseBody = response.getBody();
 
     if (!response.getStatusCode().is2xxSuccessful()) {
-      throw new RuntimeException("Failed to get access token");
-    }
-    if (response == null || response.getBody() == null) {
-      throw new RuntimeException("Failed to get access token from Salesforce");
+      throw new RuntimeException("Salesforce error: " + responseBody);
     }
 
     return new TokenResponse(

@@ -150,6 +150,46 @@
         padding: 40px;
         color: #777;
       }
+      .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid #ccc;
+        border-top: 2px solid #0070d2;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        display: inline-block;
+        vertical-align: middle;
+        margin-left: 8px;
+      }
+
+      @keyframes spin {
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .toggle-disabled {
+        opacity: 0.6;
+        pointer-events: none;
+      }
+
+      .toast {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #2e844a; /* Salesforce green */
+        color: #fff;
+        padding: 10px 16px;
+        border-radius: 6px;
+        font-size: 14px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        display: none;
+        z-index: 9999;
+      }
+
+      .toast.show {
+        display: block;
+      }
     </style>
   </head>
 
@@ -166,6 +206,7 @@
         <div class="actions">
           <button onclick="goBack()">Back</button>
           <button onclick="getMetadata()">Get Metadata</button>
+          <button onclick="getMetadata()">Refresh</button>
           <button class="logout" onclick="logout()">Logout</button>
         </div>
       </div>
@@ -219,16 +260,21 @@
                   ${statusText}
                 </span>
               </td>
-              <td>
-                <label class="switch">
+                            <td>
+                <label class="switch" id="toggle-${r.ValidationName}">
                   <input
                     type="checkbox"
                     ${r.Active ? "checked" : ""}
-                    onchange="toggleUIStatus('${r.Id}', this.checked)"
+                    onchange="toggleUIStatus('${
+                      r.ValidationName
+                    }', this.checked, this)"
                   >
                   <span class="slider"></span>
                 </label>
+                <span class="spinner" style="display:none"></span>
+
               </td>
+
             </tr>
           `;
         });
@@ -237,15 +283,56 @@
         document.getElementById("data").innerHTML = html;
       }
 
-      function toggleUIStatus(ruleId, isActive) {
-        const statusEl = document.getElementById("status-" + ruleId);
+      function toggleUIStatus(ruleName, isActive, checkboxEl) {
+        const row = checkboxEl.closest("tr");
+        const spinner = row.querySelector(".spinner");
+        const statusEl = row.querySelector(".status");
 
-        if (isActive) {
-          statusEl.innerText = "Active";
-          statusEl.className = "status status-active";
-        } else {
-          statusEl.innerText = "Inactive";
-          statusEl.className = "status status-inactive";
+        try {
+          //  lock UI
+          checkboxEl.disabled = true;
+          spinner.style.display = "inline-block";
+
+          // show pending
+          statusEl.innerText = "Updating...";
+          statusEl.className = "status status-pending";
+
+          fetch(
+            `/api/validation-rule/toggle?objectName=Account&ruleName=${encodeURIComponent(
+              ruleName
+            )}&enabled=${isActive}`,
+            {
+              method: "POST",
+            }
+          )
+            .then((r) => {
+              if (!r.ok) throw new Error("Failed");
+            })
+            .then(() => {
+              // optimistic success
+              statusEl.innerText = isActive ? "Active" : "Inactive";
+              statusEl.className = isActive
+                ? "status status-active"
+                : "status status-inactive";
+
+              // SUCCESS MESSAGE
+              showSuccess("Validation rule updated successfully");
+            })
+            .catch(() => {
+              alert("Failed to update Salesforce");
+              checkboxEl.checked = !isActive;
+              statusEl.innerText = !isActive ? "Active" : "Inactive";
+            })
+            .finally(() => {
+              // ALWAYS executed
+              spinner.style.display = "none";
+              checkboxEl.disabled = false;
+            });
+        } catch (e) {
+          // safety net
+          spinner.style.display = "none";
+          checkboxEl.disabled = false;
+          console.error(e);
         }
       }
 
@@ -255,6 +342,17 @@
       function goBack() {
         window.history.back();
       }
+
+      function showSuccess(message) {
+        const toast = document.getElementById("toast");
+        toast.innerText = message;
+        toast.classList.add("show");
+
+        setTimeout(() => {
+          toast.classList.remove("show");
+        }, 3000);
+      }
     </script>
+    <div id="toast" class="toast"></div>
   </body>
 </html>

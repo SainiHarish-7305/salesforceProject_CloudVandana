@@ -10,19 +10,17 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.io.IOException;
+import java.util.UUID;
 
 @Controller
 public class SalesforceAuthController {
 
   private final SalesforceTokenService tokenService;
 
-  @Value("${SALESFORCE_CLIENT_ID:}")
+  @Value("${salesforce.client.id}")
   private String clientId;
 
-  @Value("${SALESFORCE_CLIENT_SECRET:}")
-  private String clientSecret;
-
-  @Value("${SALESFORCE_REDIRECT_URI:}")
+  @Value("${salesforce.redirect.uri}")
   private String redirectUri;
 
   public SalesforceAuthController(SalesforceTokenService tokenService) {
@@ -30,32 +28,17 @@ public class SalesforceAuthController {
   }
 
   @GetMapping("/salesforce/login")
-  public void login(
-      @RequestParam(defaultValue = "prod") String env,
-      HttpServletResponse response) throws IOException {
+  public void login(HttpServletResponse response, HttpSession session) throws IOException {
 
-    String baseUrl = env.equals("sandbox")
-        ? "https://test.salesforce.com"
-        : "https://login.salesforce.com";
+    String state = UUID.randomUUID().toString();
+    session.setAttribute("oauth_state", state);
 
-    String authUrl = baseUrl + "/services/oauth2/authorize"
+    String authUrl = "https://login.salesforce.com/services/oauth2/authorize"
         + "?response_type=code"
         + "&client_id=" + clientId
-        + "&redirect_uri=" + redirectUri;
+        + "&redirect_uri=" + redirectUri
+        + "&state=" + state;
 
     response.sendRedirect(authUrl);
-  }
-
-  @GetMapping("/callback")
-  public String callback(
-      @RequestParam String code,
-      HttpSession session) {
-
-    TokenResponse tokenResponse = tokenService.exchangeCodeForToken(code);
-
-    session.setAttribute("ACCESS_TOKEN", tokenResponse.getAccessToken());
-    session.setAttribute("INSTANCE_URL", tokenResponse.getInstanceUrl());
-
-    return "redirect:/dashboard";
   }
 }

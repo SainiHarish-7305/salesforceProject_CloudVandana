@@ -6,48 +6,33 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.client.RestTemplate;
 
+import Project_WebApp.demo.dto.TokenResponse;
+
 import java.util.Map;
 
 @Controller
 public class SalesforceCallbackController {
 
-  // @GetMapping("/salesforce/callback")
-  // public String callback(
-  // @RequestParam("code") String code,
-  // HttpSession session) {
+  private final SalesforceTokenService tokenService;
 
-  // RestTemplate restTemplate = new RestTemplate();
-
-  // String tokenUrl = "https://login.salesforce.com/services/oauth2/token"
-  // + "?grant_type=authorization_code"
-  // + "&client_id=YOUR_CLIENT_ID"
-  // + "&client_secret=YOUR_CLIENT_SECRET"
-  // + "&redirect_uri=http://localhost:8080/salesforce/callback"
-  // + "&code=" + code;
-
-  // @SuppressWarnings("unchecked")
-  // Map<String, Object> response = restTemplate.postForObject(tokenUrl, null,
-  // Map.class);
-
-  // String accessToken = (String) response.get("access_token");
-  // String instanceUrl = (String) response.get("instance_url");
-
-  // // 🔥 STORE IN SESSION (THIS WAS MISSING)
-  // session.setAttribute("accessToken", accessToken);
-  // session.setAttribute("instanceUrl", instanceUrl);
-
-  // return "redirect:/dashboard";
-
-  // @Controller
-  // public class SalesforceCallbackController {
+  public SalesforceCallbackController(SalesforceTokenService tokenService) {
+    this.tokenService = tokenService;
+  }
 
   @GetMapping("/oauth/callback")
-  public String callback(
-      @RequestParam String access_token,
-      @RequestParam String instance_url,
+  public String callback(@RequestParam("code") String code,
+      @RequestParam(value = "state", required = false) String state,
       HttpSession session) {
-    session.setAttribute("accessToken", access_token);
-    session.setAttribute("instanceUrl", instance_url);
+
+    String savedState = (String) session.getAttribute("oauth_state");
+    if (savedState != null && !savedState.equals(state)) {
+      return "redirect:/error?msg=Invalid OAuth state";
+    }
+
+    TokenResponse tokenResponse = tokenService.exchangeCodeForToken(code);
+
+    session.setAttribute("ACCESS_TOKEN", tokenResponse.getAccessToken());
+    session.setAttribute("INSTANCE_URL", tokenResponse.getInstanceUrl());
 
     return "redirect:/dashboard";
   }

@@ -1,5 +1,6 @@
 package Project_WebApp.demo.controller;
 
+import Project_WebApp.demo.SalesforceMetadataService;
 import Project_WebApp.demo.SalesforceService;
 import Project_WebApp.demo.dto.ValidationRuleToggleRequest;
 import jakarta.servlet.http.HttpSession;
@@ -10,10 +11,10 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/validation-rule")
 public class ValidationRuleApiController {
 
-  private final SalesforceService salesforceService;
+  private final SalesforceMetadataService metadataService;
 
-  public ValidationRuleApiController(SalesforceService salesforceService) {
-    this.salesforceService = salesforceService;
+  public ValidationRuleApiController(SalesforceMetadataService metadataService) {
+    this.metadataService = metadataService;
   }
 
   @GetMapping("/metadata")
@@ -27,12 +28,14 @@ public class ValidationRuleApiController {
     }
 
     return ResponseEntity.ok(
-        salesforceService.fetchMetadata(accessToken, instanceUrl));
+        metadataService.fetchMetadata(accessToken, instanceUrl));
   }
 
   @PostMapping("/toggle")
   public ResponseEntity<Void> toggleValidationRule(
-      @RequestBody ValidationRuleToggleRequest request,
+      @RequestParam String objectName,
+      @RequestParam String ruleName,
+      @RequestParam boolean enabled,
       HttpSession session) {
 
     String accessToken = (String) session.getAttribute("ACCESS_TOKEN");
@@ -42,11 +45,12 @@ public class ValidationRuleApiController {
       return ResponseEntity.status(401).build();
     }
 
-    salesforceService.toggleValidationRule(
-        request.getRuleId(),
-        request.isActive(),
+    metadataService.toggleValidationRule(
+        instanceUrl,
         accessToken,
-        instanceUrl);
+        objectName,
+        ruleName,
+        enabled);
 
     return ResponseEntity.ok().build();
   }
