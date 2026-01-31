@@ -22,11 +22,12 @@ public class SalesforceTokenService {
   @Value("${salesforce.redirect.uri}")
   private String redirectUri;
 
+  @Value("${salesforce.token.url}")
+  private String tokenUrl;
+
   private final RestTemplate restTemplate = new RestTemplate();
 
   public TokenResponse exchangeCodeForToken(String code) {
-
-    String tokenUrl = "https://login.salesforce.com/services/oauth2/token";
 
     HttpHeaders headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
@@ -39,12 +40,7 @@ public class SalesforceTokenService {
 
     HttpEntity<String> request = new HttpEntity<>(body, headers);
 
-    ResponseEntity<Map> response;
-    try {
-      response = restTemplate.postForEntity(tokenUrl, request, Map.class);
-    } catch (Exception e) {
-      throw new RuntimeException("Salesforce token call failed", e);
-    }
+    ResponseEntity<Map> response = restTemplate.postForEntity(tokenUrl, request, Map.class);
 
     if (response == null || response.getBody() == null) {
       throw new RuntimeException("Empty response from Salesforce token API");
@@ -58,6 +54,19 @@ public class SalesforceTokenService {
 
     return new TokenResponse(
         (String) responseBody.get("access_token"),
-        (String) responseBody.get("instance_url"));
+        (String) responseBody.get("instance_url"),
+        (String) responseBody.get("id"));
+  }
+
+  public Map<String, Object> fetchUserInfo(String accessToken, String idUrl) {
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(accessToken);
+
+    HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+    ResponseEntity<Map> response = restTemplate.exchange(idUrl, HttpMethod.GET, entity, Map.class);
+
+    return response.getBody();
   }
 }

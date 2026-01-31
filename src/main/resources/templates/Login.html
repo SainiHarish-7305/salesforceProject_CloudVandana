@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
   <head>
     <meta charset="UTF-8" />
@@ -37,58 +37,37 @@
         margin-bottom: 25px;
       }
 
-      .card {
-        margin-top: 20px;
-      }
-
-      .field {
-        text-align: left;
-        margin-bottom: 15px;
-      }
-
-      label {
-        display: block;
-        margin-bottom: 6px;
-        font-weight: bold;
-        color: #555;
-      }
-
-      input {
+      /* Salesforce Login Button */
+      .sf-login-btn {
         width: 100%;
-        padding: 10px;
-        border-radius: 6px;
-        border: 1px solid #ccc;
-        font-size: 14px;
-      }
+        height: 48px;
 
-      button {
-        width: 100%;
-        padding: 12px;
-        border: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+
+        gap: 10px;
+        padding: 0 20px;
+
         border-radius: 6px;
         font-size: 15px;
-        cursor: pointer;
-        margin-top: 10px;
-         background: linear-gradient(135deg, #667eea, #764ba2);
-      }
+        font-weight: 600;
 
-      .login {
-        background-color: #667eea;
+        background: #1b96ff;
         color: #ffffff;
+        text-decoration: none;
+
+        box-sizing: border-box;
       }
 
-      .meta {
-        background-color: #4caf50;
-        color: #ffffff;
+      .sf-login-btn:hover {
+        background: #0176d3;
       }
 
-      .logout {
-        background-color: #e53935;
-        color: #ffffff;
-      }
-
-      button:hover {
-        opacity: 0.9;
+      .sf-icon {
+        height: 18px;
+        width: auto;
+        display: block;
       }
     </style>
   </head>
@@ -102,12 +81,15 @@
         with Salesforce and view important metadata from your organization.
       </p>
 
-      
-    <form action="/login" method="post">
-  <input type="text" name="username" required />
-  <input type="password" name="password" required />
-  <button type="submit">Login</button>
-</form>
-
+      <!-- Salesforce Login Button -->
+      <a href="/salesforce/login" class="sf-login-btn">
+        <img
+          src="https://upload.wikimedia.org/wikipedia/commons/f/f9/Salesforce.com_logo.svg"
+          alt="Salesforce Logo"
+          class="sf-icon"
+        />
+        Login with Salesforce
+      </a>
+    </div>
   </body>
 </html>

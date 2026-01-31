@@ -33,6 +33,8 @@ public class SalesforceMetadataService {
                 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
                 <met:fullName>%s.%s</met:fullName>
                 <met:active>%s</met:active>
+                <met:errorConditionFormula>true</met:errorConditionFormula>
+                <met:errorMessage>Temporary message</met:errorMessage>
               </met:metadata>
             </met:updateMetadata>
           </env:Body>

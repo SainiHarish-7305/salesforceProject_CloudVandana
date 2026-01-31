@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <title>Dashboard</title>
@@ -190,6 +190,35 @@
       .toast.show {
         display: block;
       }
+
+      .spinner {
+        margin-top: 25px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        color: #333;
+        font-size: 14px;
+      }
+
+      /* Actual spinning circle */
+      .loader {
+        width: 20px;
+        height: 20px;
+        border: 3px solid #ccc;
+        border-top: 3px solid #4a6cf7;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-right: 20px;
+      }
+
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
     </style>
   </head>
 
@@ -199,13 +228,16 @@
         <div>
           <h2>Salesforce Validation Rules</h2>
           <div style="font-size: 13px; color: #666; margin-top: 4px">
-            Logged in as <b th:text="${username}">User</b>
+            <p>Logged in as <b th:text="${session.SF_EMAIL}"></b></p>
           </div>
         </div>
 
         <div class="actions">
           <button onclick="goBack()">Back</button>
           <button onclick="getMetadata()">Get Metadata</button>
+          <button id="deployBtn" onclick="deployChanges()">
+            Deploy Changes
+          </button>
           <button onclick="getMetadata()">Refresh</button>
           <button class="logout" onclick="logout()">Logout</button>
         </div>
@@ -213,6 +245,11 @@
 
       <div id="data" class="empty">
         Click <b>Get Metadata</b> to load validation rules
+      </div>
+
+      <div id="spinner" style="display: none">
+        <div class="loader"></div>
+        <span>Deploying changes to Salesforce...</span>
       </div>
     </div>
 
@@ -283,6 +320,35 @@
         document.getElementById("data").innerHTML = html;
       }
 
+      function deployChanges() {
+        const btn = document.getElementById("deployBtn");
+        const spinner = document.getElementById("spinner");
+
+        // show spinner & disable button
+        spinner.style.display = "flex";
+        btn.disabled = true;
+        btn.innerText = "Deploying...";
+
+        // force UI repaint before API call
+        setTimeout(() => {
+          fetch("/api/validation-rule/deploy", {
+            method: "POST",
+          })
+            .then((res) => res.text())
+            .then((msg) => {
+              alert(msg);
+            })
+            .catch(() => {
+              alert("Deployment failed");
+            })
+            .finally(() => {
+              spinner.style.display = "none";
+              btn.disabled = false;
+              btn.innerText = "Deploy Changes";
+            });
+        }, 100); // 👈 VERY IMPORTANT
+      }
+
       function toggleUIStatus(ruleName, isActive, checkboxEl) {
         const row = checkboxEl.closest("tr");
         const spinner = row.querySelector(".spinner");
@@ -299,11 +365,11 @@
 
           fetch(
             `/api/validation-rule/toggle?objectName=Account&ruleName=${encodeURIComponent(
-              ruleName
+              ruleName,
             )}&enabled=${isActive}`,
             {
               method: "POST",
-            }
+            },
           )
             .then((r) => {
               if (!r.ok) throw new Error("Failed");
@@ -316,7 +382,7 @@
                 : "status status-inactive";
 
               // SUCCESS MESSAGE
-              showSuccess("Validation rule updated successfully");
+              // showSuccess("Validation rule updated successfully");
             })
             .catch(() => {
               alert("Failed to update Salesforce");
